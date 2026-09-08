@@ -1,184 +1,176 @@
 # -*- coding: utf-8 -*-
-"""Genera perfil.svg: la tarjeta del README de perfil de zeckless.
+"""Genera ``perfil.svg``, la cabecera animada del README de @zeckless.
 
-Es una ventana de editor de codigo dibujada en SVG. El codigo Python se escribe
-solo al cargar, linea por linea, y define los datos del perfil.
+La tarjeta representa un workbench de desarrollo: el panel izquierdo contiene
+un pequeño perfil en Python y se escribe en unos 2,6 segundos; el derecho resume
+los proyectos actuales y el stack. El SVG es autónomo y no usa recursos remotos.
 
-    python build_card.py
+Para regenerarlo:
 
-Para editar el contenido se cambia la lista CODE de abajo, no el SVG a mano.
-La altura del lienzo sale del contenido, asi que se pueden agregar o quitar
-lineas sin que nada se desborde; si una linea se pasa del ancho util, el script
-falla en vez de generar un SVG con texto cortado.
+    python3 build_card.py
+
+El diseño fuente vive en ``SVG``. Al modificar textos o tiempos, ejecuta este
+script y confirma ambos archivos en el mismo commit.
 """
-import io
+from pathlib import Path
 
-MONO = "ui-monospace, SFMono-Regular, Menlo, Consolas, DejaVu Sans Mono, monospace"
-ADV = 0.60                  # ancho de caracter monoespaciado, como fraccion del font-size
-EASE = 'calcMode="spline" keySplines="0.2 0.8 0.2 1"'
+SVG = r'''<svg xmlns="http://www.w3.org/2000/svg" width="760" height="360" viewBox="0 0 760 360" role="img" aria-labelledby="title desc">
+  <title id="title">Mario Opazo — developer workspace</title>
+  <desc id="desc">Editor de código inspirado en un workbench, con el perfil de Mario y sus proyectos actuales.</desc>
+  <defs>
+    <linearGradient id="status" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#1f6feb"/>
+      <stop offset=".58" stop-color="#6e40c9"/>
+      <stop offset="1" stop-color="#0e8a93"/>
+    </linearGradient>
+    <linearGradient id="panel" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#161b22"/>
+      <stop offset="1" stop-color="#11161d"/>
+    </linearGradient>
+    <filter id="glow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="5"/>
+    </filter>
+    <!-- Escritura progresiva: las líneas terminan de aparecer en ~2.6 s. -->
+    <clipPath id="type1"><rect x="82" y="84" width="0" height="22"><animate attributeName="width" from="0" to="150" begin=".20s" dur=".15s" fill="freeze"/></rect></clipPath>
+    <clipPath id="type2"><rect x="82" y="107" width="0" height="22"><animate attributeName="width" from="0" to="390" begin=".38s" dur=".37s" fill="freeze"/></rect></clipPath>
+    <clipPath id="type3"><rect x="82" y="130" width="0" height="22"><animate attributeName="width" from="0" to="400" begin=".78s" dur=".40s" fill="freeze"/></rect></clipPath>
+    <clipPath id="type4"><rect x="82" y="153" width="0" height="22"><animate attributeName="width" from="0" to="370" begin="1.21s" dur=".31s" fill="freeze"/></rect></clipPath>
+    <clipPath id="type5"><rect x="82" y="176" width="0" height="22"><animate attributeName="width" from="0" to="30" begin="1.55s" dur=".08s" fill="freeze"/></rect></clipPath>
+    <clipPath id="type7"><rect x="82" y="222" width="0" height="22"><animate attributeName="width" from="0" to="180" begin="1.68s" dur=".18s" fill="freeze"/></rect></clipPath>
+    <clipPath id="type8"><rect x="82" y="245" width="0" height="22"><animate attributeName="width" from="0" to="180" begin="1.90s" dur=".18s" fill="freeze"/></rect></clipPath>
+    <clipPath id="type9"><rect x="82" y="268" width="0" height="22"><animate attributeName="width" from="0" to="220" begin="2.12s" dur=".21s" fill="freeze"/></rect></clipPath>
+    <clipPath id="type10"><rect x="82" y="291" width="0" height="22"><animate attributeName="width" from="0" to="220" begin="2.37s" dur=".19s" fill="freeze"/></rect></clipPath>
+    <style>
+      .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; }
+      .ui { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+      .ln { fill: #484f58; font-size: 11px; text-anchor: end; }
+      .code { font-size: 13px; }
+      .muted { fill: #7d8590; }
+      .cursor { animation: blink 1.05s steps(1) infinite; }
+      .pulse { animation: pulse 2.4s ease-in-out infinite; }
+      @keyframes blink { 50% { opacity: 0; } }
+      @keyframes pulse { 50% { opacity: .35; } }
+      @media (prefers-reduced-motion: reduce) {
+        .cursor, .pulse { animation: none; }
+      }
+    </style>
+  </defs>
 
-W, FS, LH = 760, 13, 19     # ancho del lienzo, tamano de letra, alto de linea
-TOP = 34                    # alto de la barra de pestanas
-RAIL = 44                   # ancho del riel de actividad
-GUTTER = 84                 # borde derecho de los numeros de linea
-CODE = 96                   # donde empieza el codigo
-MINI = 700                  # donde empieza el minimapa
-STATUS = 26                 # alto de la barra de estado
+  <rect x=".5" y=".5" width="759" height="359" rx="13" fill="#0d1117" stroke="#30363d"/>
 
-# Ritmo del tecleo. Con estos valores el archivo termina de escribirse en ~2.6s;
-# subirlos lo hace mas lento y mas dramatico, bajarlos lo vuelve casi instantaneo.
-START = 0.25                # pausa antes de la primera linea
-PER_CHAR = 0.0048           # segundos por caracter
-MIN_LINE = 0.06             # duracion minima de una linea, por corta que sea
-LINE_GAP = 0.015            # pausa entre una linea y la siguiente
+  <!-- Workbench chrome: sin controles de macOS -->
+  <path d="M13 .5h734a12.5 12.5 0 0 1 12.5 12.5v31H.5V13A12.5 12.5 0 0 1 13 .5Z" fill="#161b22"/>
+  <rect x="0" y="43" width="760" height="1" fill="#30363d"/>
+  <rect x="44" y="0" width="122" height="43" fill="#0d1117"/>
+  <rect x="44" y="0" width="122" height="2" fill="#58a6ff"/>
+  <path d="M58 15h7l4 4v10H58Z" fill="none" stroke="#58a6ff" stroke-width="1.4"/>
+  <path d="M65 15v4h4" fill="none" stroke="#58a6ff" stroke-width="1.4"/>
+  <text x="76" y="27" class="mono" fill="#c9d1d9" font-size="12">profile.py</text>
+  <text x="183" y="27" class="mono muted" font-size="12">README.md</text>
+  <text x="742" y="27" class="mono muted" font-size="10" text-anchor="end">zeckless / profile</text>
 
-C = dict(
-    chrome="#161b22", rail="#10141b", paper="#0d1117", edge="#21262d",
-    gut="#484f58", tabdim="#7d8590", status="#1f6feb", mini="#21262d",
-    kw="#ff7b72",    # palabras reservadas
-    st="#a5d6ff",    # cadenas de texto
-    nm="#c9d1d9",    # identificadores
-    ty="#79c0ff",    # anotaciones de tipo
-    deco="#d2a8ff",  # decoradores
-    cls="#ffa657",   # nombres de clase
-    cm="#8b949e",    # comentarios
-)
+  <!-- Activity rail -->
+  <rect x="0" y="44" width="44" height="288" fill="#10141b"/>
+  <rect x="0" y="58" width="2" height="30" fill="#58a6ff"/>
+  <g fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6">
+    <path d="M15 61h8l5 5v12H15Z M23 61v5h5" stroke="#c9d1d9"/>
+    <circle cx="21.5" cy="111" r="6.5" stroke="#57606a"/>
+    <path d="m26.5 116 5 5" stroke="#57606a"/>
+    <circle cx="20" cy="151" r="3" stroke="#57606a"/>
+    <circle cx="29" cy="160" r="3" stroke="#57606a"/>
+    <circle cx="16" cy="169" r="3" stroke="#57606a"/>
+    <path d="m22 153 5 5m-9 8 8-5" stroke="#57606a"/>
+    <rect x="14" y="196" width="8" height="8" rx="1" stroke="#57606a"/>
+    <rect x="25" y="196" width="8" height="8" rx="1" stroke="#57606a"/>
+    <rect x="14" y="207" width="8" height="8" rx="1" stroke="#57606a"/>
+    <rect x="25" y="207" width="8" height="8" rx="1" stroke="#57606a"/>
+  </g>
 
-# Cada linea es una lista de tramos (texto, color). Una lista vacia es una
-# linea en blanco. Editar aqui, correr el script, y hacer commit del SVG.
-CODE_LINES = [
-    [("# perfil.py — asi me presento", C["cm"])],
-    [],
-    [("from", C["kw"]), (" dataclasses ", C["nm"]), ("import", C["kw"]), (" dataclass", C["nm"])],
-    [],
-    [("@dataclass", C["deco"])],
-    [("class", C["kw"]), (" Dev", C["cls"]), (":", C["nm"])],
-    [("    nombre", C["nm"]), (": ", C["nm"]), ("str", C["ty"]), ("  = ", C["kw"]),
-     ('"Mario Opazo Arnaiz"', C["st"])],
-    [("    rol", C["nm"]), (":    ", C["nm"]), ("str", C["ty"]), ("  = ", C["kw"]),
-     ('"Desarrollador de Software"', C["st"])],
-    [("    edu", C["nm"]), (":    ", C["nm"]), ("str", C["ty"]), ("  = ", C["kw"]),
-     ('"Ing. Civil en Computacion, U. de Chile"', C["st"])],
-    [],
-    # CIRTA CORP es una empresa; VTI es la Vicerrectoria de Tecnologias de la
-    # Informacion de la U. de Chile. Son dos empleadores distintos, en paralelo,
-    # asi que van como dos campos separados y no como una sola cadena.
-    [("    # dos trabajos en paralelo", C["cm"])],
-    [("    vti", C["nm"]), (":    ", C["nm"]), ("str", C["ty"]), ("  = ", C["kw"]),
-     ('"Backend & IA — MIAU, el asistente de IA"', C["st"])],
-    [("    cirta", C["nm"]), (":  ", C["nm"]), ("str", C["ty"]), ("  = ", C["kw"]),
-     ('"Full Stack — EduRobotics, LMS de robotica"', C["st"])],
-    [],
-    [("    stack", C["nm"]), (":  ", C["nm"]), ("list", C["ty"]), (" = [", C["kw"]),
-     ('"Python"', C["st"]), (", ", C["nm"]), ('"FastAPI"', C["st"]), (", ", C["nm"]),
-     ('"LangChain"', C["st"]), (", ", C["nm"]), ('"React"', C["st"]), ("]", C["kw"])],
-    [],
-    [("mario", C["nm"]), (" = ", C["kw"]), ("Dev", C["cls"]), ("()", C["nm"])],
-]
+  <!-- Editor -->
+  <text x="59" y="65" class="mono muted" font-size="10">zeckless  ›  profile.py  ›  Mario</text>
+  <line x1="44" y1="76" x2="474" y2="76" stroke="#21262d"/>
+
+  <g class="mono">
+    <text x="66" y="101" class="ln">1</text>
+    <text x="82" y="101" class="code" xml:space="preserve" clip-path="url(#type1)"><tspan fill="#ff7b72">MARIO</tspan><tspan fill="#c9d1d9"> = {</tspan></text>
+
+    <text x="66" y="124" class="ln">2</text>
+    <text x="82" y="124" class="code" xml:space="preserve" clip-path="url(#type2)"><tspan fill="#c9d1d9">    </tspan><tspan fill="#a5d6ff">"rol"</tspan><tspan fill="#c9d1d9">: (</tspan><tspan fill="#a5d6ff">"Backend &amp; IA"</tspan><tspan fill="#c9d1d9">, </tspan><tspan fill="#a5d6ff">"Full Stack"</tspan><tspan fill="#c9d1d9">),</tspan></text>
+
+    <text x="66" y="147" class="ln">3</text>
+    <text x="82" y="147" class="code" xml:space="preserve" clip-path="url(#type3)"><tspan fill="#c9d1d9">    </tspan><tspan fill="#a5d6ff">"proyectos"</tspan><tspan fill="#c9d1d9">: (</tspan><tspan fill="#a5d6ff">"MIAU"</tspan><tspan fill="#c9d1d9">, </tspan><tspan fill="#a5d6ff">"EduRobotics"</tspan><tspan fill="#c9d1d9">),</tspan></text>
+
+    <text x="66" y="170" class="ln">4</text>
+    <text x="82" y="170" class="code" xml:space="preserve" clip-path="url(#type4)"><tspan fill="#c9d1d9">    </tspan><tspan fill="#a5d6ff">"superpoder"</tspan><tspan fill="#c9d1d9">: </tspan><tspan fill="#a5d6ff">"hacer que funcione"</tspan><tspan fill="#c9d1d9">,</tspan></text>
+
+    <text x="66" y="193" class="ln">5</text>
+    <text x="82" y="193" class="code" fill="#c9d1d9" clip-path="url(#type5)">}</text>
+
+    <text x="66" y="216" class="ln">6</text>
+
+    <text x="66" y="239" class="ln">7</text>
+    <text x="82" y="239" class="code" xml:space="preserve" clip-path="url(#type7)"><tspan fill="#ff7b72">while</tspan><tspan fill="#c9d1d9"> hay_bugs:</tspan></text>
+
+    <text x="66" y="262" class="ln">8</text>
+    <text x="82" y="262" class="code" xml:space="preserve" clip-path="url(#type8)"><tspan fill="#d2a8ff">    leer_logs</tspan><tspan fill="#c9d1d9">()</tspan></text>
+
+    <text x="66" y="285" class="ln">9</text>
+    <text x="82" y="285" class="code" xml:space="preserve" clip-path="url(#type9)"><tspan fill="#d2a8ff">    volver_a_probar</tspan><tspan fill="#c9d1d9">()</tspan></text>
+
+    <text x="66" y="308" class="ln">10</text>
+    <text x="82" y="308" class="code" xml:space="preserve" clip-path="url(#type10)"><tspan fill="#c9d1d9">estado = </tspan><tspan fill="#a5d6ff">"ahora sí"</tspan></text>
+    <rect x="232" y="295" width="7" height="16" rx="1" fill="#58a6ff" opacity="0">
+      <animate attributeName="opacity" values="1;1;0;0" keyTimes="0;.5;.51;1" begin="2.56s" dur="1.05s" repeatCount="indefinite"/>
+    </rect>
+  </g>
+
+  <!-- Panel lateral: proyectos actuales -->
+  <rect x="474" y="44" width="285" height="288" fill="url(#panel)"/>
+  <line x1="474" y1="44" x2="474" y2="332" stroke="#30363d"/>
+  <text x="494" y="68" class="ui muted" font-size="10" font-weight="700" letter-spacing="1.4">NOW BUILDING</text>
+
+  <rect x="492" y="83" width="247" height="78" rx="9" fill="#0d1117" stroke="#30363d"/>
+  <circle cx="508" cy="103" r="4" fill="#58a6ff"/>
+  <circle cx="508" cy="103" r="8" fill="#58a6ff" opacity=".18" filter="url(#glow)" class="pulse"/>
+  <text x="521" y="107" class="ui" fill="#f0f6fc" font-size="13" font-weight="700">MIAU</text>
+  <text x="719" y="106" class="mono" fill="#79c0ff" font-size="9" text-anchor="end">BACKEND + IA</text>
+  <text x="508" y="130" class="ui" fill="#8b949e" font-size="11">Asistente de IA · Universidad de Chile</text>
+  <text x="508" y="148" class="mono" fill="#6e7681" font-size="9">FastAPI · PostgreSQL · Redis</text>
+
+  <rect x="492" y="174" width="247" height="78" rx="9" fill="#0d1117" stroke="#30363d"/>
+  <circle cx="508" cy="194" r="4" fill="#d2a8ff"/>
+  <text x="521" y="198" class="ui" fill="#f0f6fc" font-size="13" font-weight="700">EduRobotics</text>
+  <text x="719" y="197" class="mono" fill="#d2a8ff" font-size="9" text-anchor="end">FULL STACK</text>
+  <text x="508" y="221" class="ui" fill="#8b949e" font-size="11">LMS y simulación de robótica</text>
+  <text x="508" y="239" class="mono" fill="#6e7681" font-size="9">React · ROS 2 · WebSockets</text>
+
+  <text x="494" y="278" class="ui muted" font-size="9" font-weight="700" letter-spacing="1.2">TOOLBOX</text>
+  <g class="mono" font-size="9">
+    <rect x="492" y="288" width="52" height="22" rx="11" fill="#1f2b3a"/><text x="518" y="302.5" fill="#a5d6ff" text-anchor="middle">Python</text>
+    <rect x="550" y="288" width="58" height="22" rx="11" fill="#1f2b3a"/><text x="579" y="302.5" fill="#a5d6ff" text-anchor="middle">FastAPI</text>
+    <rect x="614" y="288" width="48" height="22" rx="11" fill="#251e36"/><text x="638" y="302.5" fill="#d2a8ff" text-anchor="middle">React</text>
+    <rect x="668" y="288" width="71" height="22" rx="11" fill="#172c2e"/><text x="703.5" y="302.5" fill="#7ee787" text-anchor="middle">PostgreSQL</text>
+  </g>
+
+  <!-- Status bar -->
+  <path d="M.5 331h759v16.5a12 12 0 0 1-12 12H12.5a12 12 0 0 1-12-12Z" fill="url(#status)"/>
+  <path d="m17 342 4-4 4 4-4 4Z" fill="none" stroke="#fff" stroke-width="1.2"/>
+  <text x="31" y="349" class="mono" fill="#fff" font-size="10">main</text>
+  <text x="742" y="349" class="mono" fill="#fff" font-size="10" text-anchor="end">Ln 10, Col 19 · UTF-8 · Python</text>
+</svg>'''
 
 
-def esc(s):
-    return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+def build() -> str:
+    """Devuelve el SVG completo con una única nueva línea final."""
+    return SVG.strip() + "\n"
 
 
-def line_chars(spans):
-    return sum(len(s) for s, _ in spans)
-
-
-def build():
-    adv = FS * ADV
-    usable = MINI - CODE - 8
-    for i, spans in enumerate(CODE_LINES):
-        wide = line_chars(spans) * adv
-        if wide > usable:
-            raise SystemExit(
-                "La linea %d mide %.0fpx y el area de codigo son %.0fpx. "
-                "Acortala, o sube MINI/W." % (i + 1, wide, usable))
-
-    y0 = TOP + 26
-    H = y0 + (len(CODE_LINES) - 1) * LH + 30 + STATUS
-    o = io.StringIO()
-    w = o.write
-
-    w('<svg xmlns="http://www.w3.org/2000/svg" width="%d" height="%d" viewBox="0 0 %d %d" '
-      'font-family="%s" role="img" aria-label="Perfil de Mario Opazo Arnaiz">\n' % (W, H, W, H, MONO))
-    w('<title>Mario Opazo Arnaiz — perfil.py</title>\n')
-    w('<desc>Ventana de editor de codigo. Un archivo Python llamado perfil.py define una clase '
-      'Dev con los datos de Mario Opazo Arnaiz: desarrollador de software, estudiante de '
-      'Ingenieria Civil en Computacion en la Universidad de Chile, con dos trabajos en paralelo '
-      '-- backend e inteligencia artificial en MIAU, el asistente de IA de la universidad, en la '
-      'VTI; y full stack en EduRobotics, una plataforma LMS de robotica, en CIRTA CORP -- y un '
-      'stack de Python, FastAPI, LangChain y React.</desc>\n')
-
-    # lienzo y marco
-    w('<rect width="%d" height="%d" rx="12" fill="%s"/>' % (W, H, C["paper"]))
-    w('<rect x="0.5" y="0.5" width="%d" height="%d" rx="12" fill="none" stroke="%s"/>'
-      % (W - 1, H - 1, C["edge"]))
-    w('<clipPath id="card"><rect width="%d" height="%d" rx="12"/></clipPath>' % (W, H))
-    w('<g clip-path="url(#card)">')
-
-    # barra de pestanas y riel de actividad
-    w('<rect x="0" y="0" width="%d" height="%d" fill="%s"/>' % (W, TOP, C["chrome"]))
-    w('<rect x="0" y="0" width="%d" height="%d" fill="%s"/>' % (RAIL, H, C["rail"]))
-    for i, gy in enumerate((58, 92, 126, 160)):
-        col = C["nm"] if i == 0 else C["gut"]
-        for k, bw in enumerate((14, 10, 12)):
-            w('<rect x="15" y="%d" width="%d" height="2.5" rx="1.2" fill="%s"/>' % (gy + k * 5, bw, col))
-    w('<rect x="%d" y="0" width="132" height="%d" fill="%s"/>' % (RAIL, TOP, C["paper"]))
-    w('<rect x="%d" y="0" width="132" height="2" fill="%s"/>' % (RAIL, C["status"]))
-    w('<circle cx="60" cy="18" r="4" fill="%s"/>' % C["ty"])
-    w('<text x="72" y="22" fill="%s" font-size="12">perfil.py</text>' % C["nm"])
-    w('<text x="192" y="22" fill="%s" font-size="12">README.md</text>' % C["tabdim"])
-    w('<line x1="%d" y1="%d" x2="%d" y2="%d" stroke="%s"/>' % (RAIL, TOP, W, TOP, C["edge"]))
-
-    # codigo: cada linea se revela con un clip que crece, como si se escribiera
-    t = START
-    for i, spans in enumerate(CODE_LINES):
-        y = y0 + i * LH
-        w('<text x="%d" y="%.1f" fill="%s" font-size="11" text-anchor="end">%d</text>'
-          % (GUTTER, y, C["gut"], i + 1))
-        if not spans:
-            continue
-        chars = line_chars(spans)
-        dur = max(MIN_LINE, chars * PER_CHAR)
-        w('<clipPath id="c%d"><rect x="%d" y="%.1f" width="0" height="%d">'
-          '<animate attributeName="width" from="0" to="%.1f" begin="%.3fs" dur="%.2fs" fill="freeze"/>'
-          '</rect></clipPath>' % (i, CODE, y - 13, LH, chars * adv, t, dur))
-        w('<g clip-path="url(#c%d)" font-size="%d" xml:space="preserve">' % (i, FS))
-        x = CODE
-        for s, col in spans:
-            w('<text x="%.1f" y="%.1f" fill="%s">%s</text>' % (x, y, col, esc(s)))
-            x += len(s) * adv
-        w('</g>')
-        # minimapa: una barra por linea, proporcional al largo
-        w('<rect x="%d" y="%.1f" width="%.1f" height="3" rx="1.5" fill="%s" opacity="0">'
-          '<animate attributeName="opacity" from="0" to="1" begin="%.3fs" dur="0.3s" fill="freeze"/>'
-          '</rect>' % (MINI, TOP + 16 + i * 6, min(46, chars * 0.85), C["mini"], t))
-        t += dur + LINE_GAP
-
-    # cursor parpadeante al final de la ultima linea
-    cx = CODE + line_chars(CODE_LINES[-1]) * adv
-    cy = y0 + (len(CODE_LINES) - 1) * LH
-    w('<rect x="%.1f" y="%.1f" width="7" height="16" fill="%s" opacity="0">'
-      '<animate attributeName="opacity" values="1;1;0;0" keyTimes="0;0.5;0.51;1" dur="1s" '
-      'begin="%.3fs" repeatCount="indefinite"/></rect>' % (cx + 1, cy - 12, C["nm"], t))
-
-    # barra de estado
-    sy = H - STATUS
-    w('<rect x="0" y="%d" width="%d" height="%d" fill="%s"/>' % (sy, W, STATUS, C["status"]))
-    w('<circle cx="18" cy="%d" r="3.2" fill="none" stroke="#ffffff" stroke-width="1.4" opacity="0.9"/>'
-      % (sy + 9))
-    w('<path d="M18 %d V%d" stroke="#ffffff" stroke-width="1.4" opacity="0.9"/>' % (sy + 12, sy + 19))
-    w('<text x="30" y="%d" fill="#ffffff" font-size="11">main</text>' % (sy + 17))
-    w('<text x="%d" y="%d" fill="#ffffff" font-size="11" text-anchor="end" opacity="0.92">'
-      'Ln %d, Col 1     UTF-8     Python 3.12     Spaces: 4</text>'
-      % (W - 16, sy + 17, len(CODE_LINES)))
-    w('</g></svg>\n')
-    return o.getvalue(), H
+def main() -> None:
+    output = Path(__file__).with_name("perfil.svg")
+    content = build()
+    output.write_text(content, encoding="utf-8")
+    print(f"{output.name}  {len(content.encode('utf-8'))} bytes")
 
 
 if __name__ == "__main__":
-    svg, height = build()
-    with open("perfil.svg", "w", encoding="utf-8") as f:
-        f.write(svg)
-    print("perfil.svg  %dx%d  %d bytes" % (W, height, len(svg)))
+    main()
