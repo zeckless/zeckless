@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Genera ``perfil.svg``, la cabecera animada del README de @zeckless.
+"""Genera ``perfil-workbench.svg``, la cabecera animada del README de @zeckless.
 
 La tarjeta representa un workbench de desarrollo: el panel izquierdo contiene
 un pequeño perfil en Python y se escribe en unos 2,6 segundos; el derecho resume
@@ -166,7 +166,7 @@ def build() -> str:
 
 
 def main() -> None:
-    output = Path(__file__).with_name("perfil.svg")
+    output = Path(__file__).with_name("perfil-workbench.svg")
     content = build()
     output.write_text(content, encoding="utf-8")
     print(f"{output.name}  {len(content.encode('utf-8'))} bytes")

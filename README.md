@@ -1,7 +1,7 @@
 <div align="center">
 
 <!-- Workbench animado. Se genera con build_card.py — no editar el SVG a mano. -->
-<img src="./perfil.svg?v=20260908-2" width="760" alt="perfil.py — Mario Opazo Arnaiz" />
+<img src="./perfil-workbench.svg" width="760" alt="perfil.py — Mario Opazo Arnaiz" />
 
 ## Mario Opazo Arnaiz
 
