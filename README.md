@@ -24,10 +24,9 @@
 ### Dónde estoy
 
 **Vicerrectoría de Tecnologías de la Información — U. de Chile** · Backend & IA
-Trabajo en **MIAU**, el asistente de IA de la universidad: un backend en FastAPI que enruta cada
-consulta a su dominio de conocimiento, sobre una arquitectura polyrepo con PostgreSQL, Redis y
-Docker. Construí el kernel de bienestar con herramientas de agente en LangChain, RAG y una suite
-de evaluación con regresiones para detectar cuándo las respuestas se degradan.
+Trabajo en el equipo que desarrolla **MIAU**, el asistente de IA de la universidad: un backend en
+FastAPI que enruta cada consulta a su dominio de conocimiento, sobre una arquitectura polyrepo con
+PostgreSQL, Redis y Docker.
 
 **CIRTA CORP** · Full Stack
 Diseñé e implementé desde cero **EduRobotics**, una plataforma LMS de robótica hoy en producción:
@@ -35,14 +34,5 @@ FastAPI sobre SQLAlchemy y PostgreSQL, frontend en React con Tailwind y shadcn/u
 Railway. Lo que más me gustó fue el simulador: editor Monaco, programación visual con Blockly
 para ROS 2 y terminal en tiempo real por WebSocket, sobre un contenedor con ROS 2 Humble y
 PyBullet desplegado en Fly.io.
-
-### Cosas que implementé desde cero para entender cómo funcionan
-
-- **[Proxy HTTP y transporte confiable sobre UDP](https://github.com/zeckless/cc4303-redes)** —
-  sin librerías, solo sockets.
-- **[Notas offline-first](https://github.com/zeckless/Notas-Offline---Doricode)** — funciona sin
-  conexión y sincroniza sola al recuperar la red. Frontend en JavaScript puro.
-- **UCasino** — lideré el módulo de apuestas con Django ORM y transacciones atómicas, para que el
-  saldo no se corrompiera con operaciones concurrentes. Equipo de 5, bajo Scrum.
 
 **Todo lo que he construido está en [mi portafolio](https://portafolio-mario-gules.vercel.app/).**
